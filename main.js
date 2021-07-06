@@ -130,3 +130,82 @@ function control(left, left45, front, right45, right, encoder_left, encoder_righ
 		let ret = coment.readResult();
 		return ret;
 }
+
+/////////////////////// CONSTRUCTION SITE /////////////////
+function MovingDiffData(longitude, lateral, orientation) {
+	var self = this;
+	self.longitude = longitude;
+	self.lateral = lateral; 
+	self.orientation = orientation;
+};
+
+var EPSILON = 1e-3;
+var PI = 3.1415926535897932384626433832795;
+function floatEqual(a, b) {
+	var diff = a - b;
+	return (diff < EPSILON) && (diff > -EPSILON); 
+}
+function longitudeMirror(movingDiffData) {
+	return new MovingDiffData(-movingDiffData.longitude, movingDiffData.lateral, -movingDiffData.orientation); 
+}
+
+function lateralMirror(movingDiffData) {
+	return new MovingDiffData(movingDiffData.longitude, -movingDiffData.lateral, -movingDiffData.orientation);
+}
+
+var MOUSE_WIDTH = 10.0 / 2.0 + 55.0 + 10.0 / 2.0;
+
+
+function calculateMovingDiff(left, right) {
+	if (floatEqual(left, right)) {
+		return new MovingDiffData(left, 0, 0);
+	}
+	if (floatEqual(left, 0.0)) {	// right must not be 0.0
+		if (floatEqual(right, 0.0)) return new MovingDiffData(0.0, 0.0, 0.0);
+		if (right < 0.0) return longitudeMirror(calculateMovingDiff(-left, -right));
+
+		var wholeCircle = PI * MOUSE_WIDTH * 2.0;
+		console.log("whole circle = ", wholeCircle);
+		while (right > wholeCircle) right -= wholeCircle;
+		var ori = right * 2.0 * PI / wholeCircle;
+		if (ori > PI) ori -= 2*PI;
+		return new MovingDiffData(Math.sin(ori) * MOUSE_WIDTH / 2.0, 
+															(1.0 - Math.cos(ori)) * MOUSE_WIDTH / 2.0,
+															ori);
+	}
+	if (floatEqual(right, 0.0)) return lateralMirror(calculateMovingDiff(right, left));
+	if (left > 0 && right > 0) {
+		if (left < right) { // turn left
+			var xOffset = (MOUSE_WIDTH * left) / (right / left);
+			var radius = xOffset + MOUSE_WIDTH;
+			var wholeCircle = PI * radius * 2.0;
+			while (right > wholeCircle) right -= wholeCircle;
+			var ori = right * 2.0 * PI / wholeCircle;
+			return new MovingDiffData(Math.sin(ori) * (xOffset + MOUSE_WIDTH / 2.0),
+																(1.0 - Math.cos(ori)) * (xOffset + MOUSE_WIDTH / 2.0),
+																ori);
+			
+
+		}
+	}
+}
+
+function main() {
+	// var moving = calculateMovingDiff();
+	console.log(calculateMovingDiff(0, 0));
+	console.log(calculateMovingDiff(0, 50));
+	console.log(calculateMovingDiff(0, 100));
+	console.log(calculateMovingDiff(0, 150));
+	console.log(calculateMovingDiff(0, 300));
+	console.log(calculateMovingDiff(0, 400));
+	console.log(calculateMovingDiff(0, 500));
+	console.log(calculateMovingDiff(0, 5000));
+	console.log(calculateMovingDiff(0, 5));
+	console.log(calculateMovingDiff(0, -5));
+	console.log(calculateMovingDiff(0, 102));
+	console.log(calculateMovingDiff(0, 204));
+	console.log(calculateMovingDiff(204, 0));
+	
+}
+
+main();
